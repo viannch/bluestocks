@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlueStocks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdn.jsdelivr.net/gh/remix-design/RemixIcon@4.5.0/fonts/remixicon.css" rel="stylesheet">
+    
+   <style>
+       :root { 
+        --bg-deep: #050505; 
+        --bg-card: #0c0c0c; 
+        --accent: #3b82f6; 
+        --border: rgba(255, 255, 255, 0.06); 
+    }
+    
+    body { 
+        background-color: var(--bg-deep); 
+        color: #ffffff; 
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        letter-spacing: -0.01em;
+        /* Tambahkan padding-bottom agar tidak tertutup nav mobile */
+        padding-bottom: 5rem; 
+    }
+
+    @media (min-width: 768px) {
+        body { padding-bottom: 0; }
+    }
+
+    /* Mencegah zoom otomatis pada input iOS & Android */
+    input, select, textarea { font-size: 16px !important; }
+
+    .glass { 
+        background: rgba(12, 12, 12, 0.8); 
+        backdrop-filter: blur(20px); 
+        border: 1px solid var(--border); 
+    }
+
+    .glass-card {
+        background: linear-gradient(145deg, rgba(20,20,20,0.8) 0%, rgba(10,10,10,0.8) 100%);
+        border: 1px solid var(--border);
+    }
+
+    /* Table Responsiveness */
+    .table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table { min-width: 500px; }
+
+    /* Navigasi Mobile yang lebih pas */
+    .mobile-nav-active { color: var(--accent) !important; transform: scale(1.1); }
+
+    .stock-avatar {
+        background: linear-gradient(135deg, #3b82f6 0%, #ffffff 100%);
+        color: #050505;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Active Navigation States */
+        .nav-item.active {
+            color: #fff;
+            position: relative;
+        }
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 3px;
+            background: var(--accent);
+            border-radius: 10px;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Animations */
+        .page-fade { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(8px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .btn-interact { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-interact:active { transform: scale(0.95); }
+
+        /* Custom Input Styling */
+        input, select {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+        input:focus, select:focus {
+            border-color: var(--accent) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* Hide Scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Table Row Hover */
+        .stock-row:hover { background: rgba(255, 255, 255, 0.02); }
+
+        /* Animasi halus untuk badge verified */
+.verified-badge {
+    filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.5));
+    flex-shrink: 0;
+}
+
+#port-cash, #port-value {
+    transition: font-size 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+    </style>
+</head>
+<body class="min-h-screen pb-20 md:pb-0">
+
+   <section id="auth-screen" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6">
+        <div class="max-w-md w-full glass p-8 rounded-[2.5rem] shadow-2xl page-fade border-t border-white/10">
+            <div class="text-center mb-10">
+                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-600/30">
+                    <i data-lucide="zap" class="text-white w-8 h-8 fill-white"></i>
+                </div>
+                <h2 id="auth-title" class="text-3xl font-extrabold tracking-tighter uppercase">BlueSTOCK</h2>
+                <p id="auth-subtitle" class="text-gray-500 text-sm mt-2 font-medium">BlueSTOCK The best stocks</p>
+            </div>
+
+            <form id="auth-form" onsubmit="handleAuth(event)" class="space-y-4">
+                <div id="signup-only" class="hidden space-y-4">
+                    <input type="text" id="auth-name" placeholder="Full Name" class="w-full p-4 rounded-2xl outline-none text-sm font-semibold">
+                    <input type="date" id="auth-dob" class="w-full p-4 rounded-2xl outline-none text-sm font-semibold text-gray-400">
+                </div>
+
+                <input type="email" id="auth-email" placeholder="Email Address" required class="w-full p-4 rounded-2xl outline-none text-sm font-semibold">
+                <input type="password" id="auth-pass" placeholder="Password" required class="w-full p-4 rounded-2xl outline-none text-sm font-semibold">
+
+                <div id="agreement-only" class="hidden flex items-start gap-3 px-2">
+                    <input type="checkbox" id="auth-agree" class="mt-1 w-4 h-4 rounded accent-blue-600">
+                    <label for="auth-agree" class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                        I agree to the Terms of Service and Privacy Policy for virtual asset trading.
+                    </label>
+                </div>
+
+                <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl mt-4 hover:bg-blue-500 transition-all btn-interact shadow-xl shadow-blue-600/20 uppercase tracking-widest text-xs">
+                    LOG IN
+                </button>
+            </form>
+
+            <div class="mt-8 text-center">
+                <p class="text-sm text-gray-500" id="auth-toggle-text">
+                    Don't have an account? 
+                    <button onclick="toggleAuthMode()" class="text-blue-500 font-bold ml-1">Sign Up</button>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <nav class="sticky top-0 z-50 glass px-6 md:px-12 py-5 flex justify-between items-center">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="navigate('market')">
+            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+                <i data-lucide="trending-up" class="text-white w-5 h-5"></i>
+            </div>
+        </div>
+        
+        <div class="hidden md:flex gap-10 text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em]">
+            <button onclick="navigate('market')" id="nav-market" class="nav-item active transition-colors">Market</button>
+            <button onclick="navigate('portfolio')" id="nav-portfolio" class="nav-item transition-colors">Portfolio</button>
+            <button onclick="navigate('trade')" id="nav-trade" class="nav-item transition-colors">Trade</button>
+            <button onclick="navigate('history')" id="nav-history" class="nav-item transition-colors">History</button>
+            <button onclick="navigate('withdraw')" id="nav-withdraw" class="nav-item transition-colors">Withdraw</button>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div class="text-right">
+                <div id="user-display-container" class="text-xs font-bold text-gray-400"></div>
+                <p id="top-balance" class="text-green-400 font-mono font-bold text-sm tracking-tighter">Rp 0</p>
+            </div>
+        </div>
+    </nav>
+
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 glass px-8 py-4 flex justify-between items-center rounded-t-[2rem] border-t border-white/10">
+        <button onclick="navigate('market')" class="text-gray-500 flex flex-col items-center gap-1"><i data-lucide="layout-grid" class="w-5 h-5"></i><span class="text-[9px] font-bold uppercase">Market</span></button>
+        <button onclick="navigate('portfolio')" class="text-gray-500 flex flex-col items-center gap-1"><i data-lucide="briefcase" class="w-5 h-5"></i><span class="text-[9px] font-bold uppercase">Assets</span></button>
+        <button onclick="navigate('trade')" class="text-blue-500 flex flex-col items-center gap-1 scale-110"><i data-lucide="arrow-up-down" class="w-6 h-6"></i><span class="text-[9px] font-bold uppercase">Trade</span></button>
+        <button onclick="navigate('history')" class="text-gray-500 flex flex-col items-center gap-1"><i data-lucide="history" class="w-5 h-5"></i><span class="text-[9px] font-bold uppercase">History</span></button>
+        <button onclick="navigate('withdraw')" class="text-gray-500 flex flex-col items-center gap-1"><i data-lucide="wallet" class="w-5 h-5"></i><span class="text-[9px] font-bold uppercase">Withdraw</span></button>
+    </nav>
+
+
+    <main class="max-w-6xl mx-auto p-4 md:p-10">
+
+        <section id="page-withdraw" class="page-fade hidden">
+    <div class="max-w-2xl mx-auto">
+        <h2 class="text-4xl font-extrabold tracking-tight mb-2">Penarikan Dana</h2>
+        <p class="text-gray-500 text-sm mb-10">Tarik saldo virtual Anda ke rekening tujuan secara instan.</p>
+
+        <div class="glass-card p-8 rounded-[2.5rem] border-t-4 border-t-orange-500">
+            <div class="mb-8">
+                <p class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Saldo Tersedia</p>
+                <h3 id="withdraw-available" class="text-3xl font-bold font-mono text-white">Rp 0</h3>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Metode Tujuan</label>
+                    <select id="withdraw-method" class="w-full p-4 rounded-2xl outline-none font-bold text-white">
+                        <option value="BCA">Bank Central Asia (BCA)</option>
+                        <option value="MANDIRI">Bank Mandiri</option>
+                        <option value="DANA">DANA (E-Wallet)</option>
+                        <option value="GOPAY">GoPay</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Nomor Rekening / HP</label>
+                    <input type="text" id="withdraw-account" placeholder="Contoh: 822102xxxx" class="w-full p-4 rounded-2xl outline-none font-mono font-bold">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Jumlah Penarikan (Rp)</label>
+                    <input type="number" id="withdraw-amount" placeholder="Min. Rp 50.000" class="w-full p-4 rounded-2xl outline-none font-mono font-bold">
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="setWithdrawAmount(0.5)" class="text-[9px] px-3 py-1 bg-white/5 rounded-lg font-bold border border-white/10 hover:bg-white/10">50% Saldo</button>
+                        <button onclick="setWithdrawAmount(1)" class="text-[9px] px-3 py-1 bg-white/5 rounded-lg font-bold border border-white/10 hover:bg-white/10">Tarik Semua</button>
+                    </div>
+                </div>
+
+                <div class="p-5 bg-orange-500/10 rounded-2xl border border-dashed border-orange-500/20 flex justify-between items-center">
+                    <div>
+                        <span class="text-[10px] font-black text-gray-400 uppercase block">Biaya Admin</span>
+                        <span class="text-xs font-bold text-orange-400 italic">GRATIS UNTUK VERIFIED</span>
+                    </div>
+                    <i class="ri-information-line text-orange-500"></i>
+                </div>
+
+                <button onclick="processWithdraw()" class="w-full bg-orange-600 text-white font-black py-5 rounded-[1.5rem] transition-all btn-interact shadow-xl hover:shadow-orange-600/20 uppercase tracking-[0.2em] text-xs">
+                    Tarik Dana Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+        
+        <section id="page-market" class="page-fade">
+            
+            <div class="glass-card rounded-[2.5rem] overflow-hidden">
+                <div class="overflow-x-auto">
+                    <div class="table-wrapper no-scrollbar">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-white/5">
+                                <th class="p-6">Symbol</th>
+                                <th class="p-6">Price</th>
+                                <th class="p-6">24h Change</th>
+                                <th class="p-6 text-right">Activity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="market-table-body" class="font-medium text-sm"></tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="page-portfolio" class="page-fade hidden">
+            <h2 class="text-4xl font-extrabold tracking-tight mb-10">Portfolio</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+                <div class="glass-card p-8 rounded-[2rem] border-l-4 border-l-blue-600">
+                    <p class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-3">Available Cash</p>
+                    <h3 id="port-cash" class="text-3xl font-bold font-mono text-white">Rp 0</h3>
+                </div>
+                <div class="glass-card p-8 rounded-[2rem]">
+                    <p class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-3">Market Value</p>
+                    <h3 id="port-value" class="text-3xl font-bold font-mono">Rp 0</h3>
+                </div>
+                <div class="glass-card p-8 rounded-[2rem]">
+                    <p class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-3">Unrealized P&L</p>
+                    <h3 id="port-pnl-summary" class="text-3xl font-bold font-mono text-gray-500">Rp 0 (0%)</h3>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-[2.5rem] overflow-hidden">
+                <div class="table-wrapper no-scrollbar">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-gray-500 text-[10px] font-black uppercase tracking-widest border-b border-white/5">
+                            <th class="p-6">Asset</th>
+                            <th class="p-6">Avg Price</th>
+                            <th class="p-6">Current</th>
+                            <th class="p-6">Return</th>
+                            <th class="p-6 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-body" class="text-sm font-medium"></tbody>
+                </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="page-trade" class="page-fade hidden">
+            <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <span id="chart-symbol" class="text-3xl font-black tracking-tighter italic">---</span>
+                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Live Execution</p>
+                        </div>
+                        <div class="text-right">
+                            <span id="chart-price" class="text-xl font-mono font-bold text-blue-500">Rp 0</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-h-[250px] relative">
+                        <canvas id="stockChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-card p-8 rounded-[2.5rem] border-t-4 border-t-blue-600">
+                    <div class="flex p-1.5 bg-black rounded-2xl mb-8 border border-white/5">
+                        <button onclick="setTradeMode('buy')" id="btn-mode-buy" class="flex-1 py-3 rounded-xl font-bold bg-blue-600 text-white btn-interact text-xs tracking-widest">BUY</button>
+                        <button onclick="setTradeMode('sell')" id="btn-mode-sell" class="flex-1 py-3 rounded-xl font-bold text-gray-500 btn-interact text-xs tracking-widest">SELL</button>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Select Asset</label>
+                            <select id="trade-symbol" onchange="updateTradePriceDisplay()" class="w-full p-4 rounded-2xl outline-none font-bold text-white"></select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Market Price</label>
+                                <input type="text" id="trade-price" readonly class="w-full p-4 rounded-2xl font-mono text-gray-500 font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Quantity (Lot)</label>
+                                <input type="number" id="trade-qty" value="1" min="1" class="w-full p-4 rounded-2xl outline-none font-mono font-bold">
+                            </div>
+                        </div>
+                        
+                        <div class="p-5 bg-white/5 rounded-2xl border border-dashed border-white/10 flex justify-between items-center">
+                            <span class="text-[10px] font-black text-gray-500 uppercase">Estimated Total</span>
+                            <span id="trade-total" class="font-bold font-mono text-blue-400">Rp 0</span>
+                        </div>
+
+                        <button onclick="processTrade()" id="btn-execute" class="w-full bg-white text-black font-black py-5 rounded-[1.5rem] transition-all btn-interact shadow-xl hover:shadow-white/10 uppercase tracking-[0.2em] text-xs">
+                            Confirm Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+       <section id="page-history" class="page-fade hidden">
+    <h2 class="text-4xl font-extrabold tracking-tight mb-6">Order Log & Stats</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+        <div class="glass-card p-6 rounded-[2rem] flex items-center justify-between">
+            <div>
+                <p class="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Trading Win Rate</p>
+                <h3 id="win-rate-pct" class="text-4xl font-black font-mono text-white">0%</h3>
+            </div>
+            <div class="w-16 h-16 rounded-full border-4 border-white/5 flex items-center justify-center relative">
+                <div id="win-rate-circle" class="absolute inset-0 rounded-full border-4 border-blue-500 transition-all duration-500" style="clip-path: inset(0 0 0 0);"></div>
+                <i class="ri-medal-line text-2xl text-gray-500"></i>
+            </div>
+        </div>
+        <div class="glass-card p-6 rounded-[2rem]">
+            <div class="flex justify-between mb-2">
+                <span class="text-[10px] font-black text-gray-500 uppercase">Profit vs Loss Trades</span>
+            </div>
+            <div class="flex gap-2 h-4 rounded-full overflow-hidden bg-white/5">
+                <div id="bar-win" class="bg-green-500 transition-all duration-500" style="width: 50%"></div>
+                <div id="bar-loss" class="bg-red-500 transition-all duration-500" style="width: 50%"></div>
+            </div>
+            <div class="flex justify-between mt-2 font-mono text-[10px]">
+                <span id="count-win" class="text-green-500">0 Wins</span>
+                <span id="count-loss" class="text-red-500">0 Losses</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-card rounded-[2.5rem] overflow-hidden">
+        <div class="table-wrapper no-scrollbar">
+        <table class="w-full text-left text-sm">
+            <thead>
+                <tr class="text-gray-500 text-[10px] font-black uppercase tracking-widest border-b border-white/5">
+                    <th class="p-6">Timestamp</th>
+                    <th class="p-6">Action</th>
+                    <th class="p-6">Symbol</th>
+                    <th class="p-6">P&L (Sell Only)</th>
+                    <th class="p-6 text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody id="history-body" class="font-medium text-gray-300"></tbody>
+        </table>
+        </div>
+    </div>
+</section>
+
+    </main>
+
+    <script type="module">
+ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // CONFIGURATION
+    const firebaseConfig = {
+        apiKey: "AIzaSyBb7SirkpozgYtv9VCwmFYN1aBoMaHUkJA",
+        authDomain: "drevvstock.firebaseapp.com",
+        projectId: "drevvstock",
+        storageBucket: "drevvstock.firebasestorage.app",
+        messagingSenderId: "353766954641",
+        appId: "1:353766954641:web:28530784f240c3805e1130"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    // APP STATE
+    let balance = 0;
+    let portfolio = JSON.parse(localStorage.getItem('drevv_portfolio')) || {};
+    let tradeHistory = JSON.parse(localStorage.getItem('drevv_history')) || [];
+    let currentMarket = {};
+    let currentMode = 'buy';
+    let isLoginMode = true;
+    let simulationInterval;
+    
+    // CHART STATE
+    let stockChartInstance = null;
+    let priceHistory = [];
+    let lastSelectedSymbol = "";
+
+   async function syncUserData(user) {
+    const userRef = ref(db, `users/${user.uid}`);
+    const snap = await get(userRef);
+    
+    if (!snap.exists()) {
+        const initialData = {
+            displayName: user.displayName,
+            email: user.email,
+            balance: 100000000,
+            portfolio: {},
+            history: [],       // Inisialisasi history kosong
+            totalHistory: 0    // Trigger reset
+        };
+        await set(userRef, initialData);
+        balance = initialData.balance;
+        portfolio = initialData.portfolio;
+        tradeHistory = initialData.history;
+    }
+
+    // Listener Real-time untuk perubahan saldo, portfolio, dan RESET HISTORY
+    onValue(userRef, (snapshot) => {
+        if(snapshot.exists()){
+            const data = snapshot.val();
+            balance = data.balance;
+            portfolio = data.portfolio || {};
+            
+            // LOGIKA RESET: Jika totalHistory di firebase diubah jadi 0 oleh admin/user
+            if (data.totalHistory === 0) {
+                tradeHistory = [];
+                // Update kembali ke DB agar tidak terus menerus reset, atau biarkan 0
+                update(userRef, { history: [] });
+            } else {
+                tradeHistory = data.history || [];
+            }
+            
+            updateUI();
+            if (document.getElementById('page-history').classList.contains('hidden') === false) {
+                renderHistory();
+            }
+        }
+    });
+}
+
+    // --- VIRTUAL CHART LOGIC ---
+    window.initChart = () => {
+        const canvas = document.getElementById('stockChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        
+        if (stockChartInstance) {
+            stockChartInstance.destroy();
+        }
+
+        // Gunakan Chart global dari CDN jsDelivr
+        stockChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(20).fill(''),
+                datasets: [{
+                    label: 'Price',
+                    data: priceHistory,
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { 
+                        display: true, 
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#555', font: { size: 10, family: 'JetBrains Mono' } }
+                    }
+                },
+                animation: { duration: 0 }
+            }
+        });
+    };
+
+        const initialStockList = ["BBRI", "BBCA", "DVTR", "EMAS", "MDKA", "GGRM", "AAPL", "GGLE", "BIPI", "HRTA", "ANTM", "DEWA", "ARCI", "RMKO", "RLCO", "PTRO", "PANI", "INET", "PPRE", "PADI", "NZIA", "PNLF", "BKSL"];
+        const basePrices = { "DVTR": 150, "BBRI": 4250, "BBCA": 10100, "EMAS": 1200000 };
+
+        // --- AUTH FUNCTIONS ---
+        window.toggleAuthMode = () => {
+            isLoginMode = !isLoginMode;
+            const elements = {
+                title: document.getElementById('auth-title'),
+                subtitle: document.getElementById('auth-subtitle'),
+                signupFields: document.getElementById('signup-only'),
+                agreement: document.getElementById('agreement-only'),
+                submitBtn: document.getElementById('auth-submit-btn'),
+                toggleText: document.getElementById('auth-toggle-text')
+            };
+
+            if (isLoginMode) {
+                elements.title.innerText = "LOGIN TO DREVV";
+                elements.subtitle.innerText = "Masukan detail akun anda untuk melanjutkan";
+                elements.signupFields.classList.add('hidden');
+                elements.agreement.classList.add('hidden');
+                elements.submitBtn.innerText = "LOG IN";
+                elements.toggleText.innerHTML = `Belum punya akun? <button onclick="toggleAuthMode()" class="text-blue-500 font-bold hover:underline">Daftar Sekarang</button>`;
+            } else {
+                elements.title.innerText = "CREATE ACCOUNT";
+                elements.subtitle.innerText = "Bergabung dengan komunitas trader virtual";
+                elements.signupFields.classList.remove('hidden');
+                elements.agreement.classList.remove('hidden');
+                elements.submitBtn.innerText = "SIGN UP";
+                elements.toggleText.innerHTML = `Sudah punya akun? <button onclick="toggleAuthMode()" class="text-blue-500 font-bold hover:underline">Masuk di sini</button>`;
+            }
+        };
+
+        window.handleAuth = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const pass = document.getElementById('auth-pass').value;
+
+            try {
+                if (!isLoginMode) {
+                    const name = document.getElementById('auth-name').value;
+                    const agree = document.getElementById('auth-agree').checked;
+                    if (!name || !agree) return alert("Harap lengkapi data dan persetujuan!");
+
+                    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+                    await updateProfile(cred.user, { displayName: name });
+                } else {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                }
+            } catch (err) {
+                alert("Auth Error: " + err.message);
+            }
+        };
+
+      onAuthStateChanged(auth, async (user) => {
+    const screen = document.getElementById('auth-screen');
+    if (user) {
+        screen.classList.add('hidden');
+        renderUserHeader(user);
+        await syncUserData(user); // Panggil fungsi sinkronisasi
+    } else {
+        screen.classList.remove('hidden');
+    }
+});
+
+     function renderUserHeader(user) {
+    const container = document.getElementById('user-display-container');
+    // Logika verifikasi tetap sama
+    const isVerified = user.email === "drevviann@gmail.com"; 
+    
+    container.innerHTML = `
+        <div class="flex items-center gap-1 mb-1">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                ${user.displayName || 'TRADER'}
+            </span>
+            ${isVerified ? `
+                <div class="flex items-center justify-center">
+                    <i class="ri-verified-badge-fill text-blue-400 text-[11.5px]"></i>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    // Tidak perlu lucide.createIcons() lagi untuk bagian ini
+}
+
+      // Tambahkan variabel global untuk menyimpan harga pembukaan
+let marketOpenPrices = JSON.parse(localStorage.getItem('drevv_open_prices')) || {};
+let lastResetDate = localStorage.getItem('drevv_last_reset') || "";
+let trendStep = 0; // Untuk melacak fase pergerakan
+
+function startMarketSimulation() {
+    if (simulationInterval) clearInterval(simulationInterval);
+    
+    simulationInterval = setInterval(async () => {
+        if (!currentMarket) return;
+
+        // Pilih 3-5 saham secara acak untuk digerakkan sangat cepat
+        const tickers = Object.keys(currentMarket);
+        const selected = tickers.sort(() => 0.5 - Math.random()).slice(0, 5);
+
+        for (const t of selected) {
+            const stockRef = ref(db, `market/${t}`);
+            const stock = currentMarket[t];
+            
+            // LOGIKA BULLISH RUN DENGAN PULLBACK
+            let change;
+            
+            // Setiap 50 langkah, buat 10 langkah pullback (koreksi)
+            if (trendStep % 60 > 50) {
+                // FASE PULLBACK: Turun sedikit (-0.002% s/d -0.005%)
+                change = -(Math.random() * 0.00005 + 0.00002);
+            } else {
+                // FASE NAIK: Konsisten naik (+0.001% s/d +0.003%)
+                // Kita buat sedikit variasi agar ATH tidak terlihat kaku
+                change = (Math.random() * 0.005 + 0.001);
+            }
+
+            const newPrice = Math.max(50, Math.round(stock.price * (1 + change)));
+            
+            // Simpan harga sebelumnya untuk indikator warna
+            await update(stockRef, { 
+                lastPrice: stock.price, 
+                price: newPrice 
+            });
+        }
+        
+        trendStep++; // Naikkan step simulasi
+    }, 100); // Eksekusi setiap 0.2 detik (200ms)
+}
+
+        async function initDB() {
+            const mRef = ref(db, 'market');
+            const snap = await get(mRef);
+            if (!snap.exists()) {
+                let data = {};
+                initialStockList.forEach(t => {
+                    data[t] = { ticker: t, price: basePrices[t] || 1000, lastPrice: basePrices[t] || 1000 };
+                });
+                await set(mRef, data);
+            }
+        }
+
+        // --- CORE LOGIC ---
+      const fmt = (n) => new Intl.NumberFormat('id-ID', { 
+    style: 'currency', 
+    currency: 'IDR', 
+    minimumFractionDigits: 0 
+}).format(n);
+
+        window.navigate = (id) => {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active', 'text-white'));
+            document.getElementById(`page-${id}`).classList.remove('hidden');
+            document.getElementById(`nav-${id}`).classList.add('active', 'text-white');
+            if(id === 'portfolio') renderPortfolio();
+            if(id === 'history') renderHistory();
+        };
+
+       window.renderMarket = () => {
+    const body = document.getElementById('market-table-body');
+    const select = document.getElementById('trade-symbol');
+    if(!body || !currentMarket) return;
+    
+    let html = '';
+    let options = '';
+    
+    // Urutkan berdasarkan ticker
+    Object.values(currentMarket).sort((a,b) => a.ticker.localeCompare(b.ticker)).forEach(s => {
+        const isUp = s.price >= s.lastPrice;
+        const colorClass = isUp ? 'text-green-500' : 'text-red-500';
+        const icon = isUp ? 'ri-arrow-right-up-line' : 'ri-arrow-right-down-line';
+        const change = s.lastPrice !== 0 ? (((s.price - s.lastPrice) / s.lastPrice) * 100).toFixed(2) : "0.00";
+        
+        // Ambil inisial huruf depan (Contoh: ANTM -> A)
+        const initial = s.ticker.charAt(0);
+
+        html += `
+            <tr class="stock-row border-b border-white/5 transition-all hover:bg-white/[0.03] cursor-pointer" onclick="quickTrade('${s.ticker}')">
+                <td class="p-5">
+                    <div class="flex items-center gap-4">
+                        <div class="stock-avatar w-11 h-11 rounded-2xl text-lg tracking-tighter">
+                            ${initial}
+                        </div>
+                        <div>
+                            <div class="font-black text-white tracking-tight">${s.ticker}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Equity Asset</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="p-5 font-mono font-bold text-gray-200">
+                    ${fmt(s.price)}
+                </td>
+                <td class="p-5 font-mono">
+                    <div class="flex items-center gap-1 ${colorClass} font-bold">
+                        <i class="${icon}"></i>
+                        <span>${change}%</span>
+                    </div>
+                </td>
+                <td class="p-5 text-right">
+                    <button class="bg-blue-600/10 text-blue-400 px-5 py-2 rounded-xl text-[10px] font-black tracking-widest border border-blue-600/20 hover:bg-blue-600 hover:text-white transition-all uppercase">
+                        Trade
+                    </button>
+                </td>
+            </tr>`;
+            
+        options += `<option value="${s.ticker}">${s.ticker}</option>`;
+    });
+
+    body.innerHTML = html;
+    if(select.innerHTML === "") select.innerHTML = options;
+};
+
+ window.processTrade = async () => {
+    const user = auth.currentUser;
+    if (!user) return alert("Silahkan login kembali");
+
+    const t = document.getElementById('trade-symbol').value;
+    const lot = parseInt(document.getElementById('trade-qty').value);
+    const stock = currentMarket[t];
+    const cost = stock.price * lot * 100;
+    
+    let newBalance = balance;
+    let newPortfolio = { ...portfolio };
+    let realizedPnL = null;
+
+    if (currentMode === 'buy') {
+        if (balance < cost) return alert("Saldo tidak mencukupi!");
+        
+        // --- LOGIKA MARKET MOVER (SULTAN ONLY) ---
+        // Jika saldo di atas 1 Triliun (1.000.000.000.000)
+        if (balance >= 1000000000000) {
+            // Persentase kenaikan random 1% - 10%
+            const pumpPercentage = (Math.random() * (0.10 - 0.01) + 0.01);
+            const priceIncrease = Math.round(stock.price * pumpPercentage);
+            const newMarketPrice = stock.price + priceIncrease;
+
+            // Update harga di Firebase agar market bergerak untuk semua user
+            const marketRef = ref(db, `market/${t}`);
+            await update(marketRef, { 
+                lastPrice: stock.price, 
+                price: newMarketPrice 
+            });
+            
+            console.log(`🔥 MARKET MOVED! You pumped ${t} by ${(pumpPercentage * 100).toFixed(2)}%`);
+        }
+        // -----------------------------------------
+
+        newBalance -= cost;
+        if (!newPortfolio[t]) newPortfolio[t] = { qty: 0, avg: 0 };
+        const totalQty = newPortfolio[t].qty + (lot * 100);
+        const totalCost = (newPortfolio[t].qty * newPortfolio[t].avg) + cost;
+        newPortfolio[t].avg = Math.round(totalCost / totalQty);
+        newPortfolio[t].qty = totalQty;
+
+    } else {
+        const shareQty = lot * 100;
+        if (!newPortfolio[t] || newPortfolio[t].qty < shareQty) {
+            return alert("Saham tidak mencukupi!");
+        }
+        
+        realizedPnL = (stock.price - newPortfolio[t].avg) * shareQty;
+        newBalance += cost;
+        newPortfolio[t].qty -= shareQty;
+        if (newPortfolio[t].qty === 0) delete newPortfolio[t];
+    }
+
+    const newOrder = {
+        date: new Date().toLocaleString('id-ID'),
+        type: currentMode.toUpperCase(),
+        ticker: t,
+        qty: lot,
+        total: cost,
+        pnl: realizedPnL
+    };
+
+    const updatedHistory = [newOrder, ...tradeHistory].slice(0, 50);
+    const userRef = ref(db, `users/${user.uid}`);
+    
+    await update(userRef, {
+        balance: newBalance,
+        portfolio: newPortfolio,
+        history: updatedHistory
+    });
+
+    alert(balance >= 1000000000000 && currentMode === 'buy' 
+        ? `Order Berhasil! Power Anda menggerakkan market ${t}!` 
+        : "Order Berhasil!");
+    
+    navigate('history');
+};
+
+        async function updatePriceImpact(t, lot, impact) {
+            const sRef = ref(db, `market/${t}`);
+            const snap = await get(sRef);
+            const data = snap.val();
+            const newPrice = Math.max(50, Math.round(data.price * (1 + (impact * lot))));
+            await update(sRef, { lastPrice: data.price, price: newPrice });
+        }
+
+        // Fungsi Global untuk Withdrawal
+window.setWithdrawAmount = (ratio) => {
+    document.getElementById('withdraw-amount').value = Math.floor(balance * ratio);
+};
+
+window.processWithdraw = async () => {
+    const amount = parseInt(document.getElementById('withdraw-amount').value);
+    const account = document.getElementById('withdraw-account').value;
+    const method = document.getElementById('withdraw-method').value;
+
+    if (!amount || amount < 50000) return alert("Minimal penarikan adalah Rp 50.000");
+    if (!account) return alert("Harap isi nomor rekening/tujuan");
+    if (amount > balance) return alert("Saldo tidak mencukupi!");
+
+    const user = auth.currentUser;
+    const userRef = ref(db, `users/${user.uid}`);
+    
+    const newBalance = balance - amount;
+    const withdrawOrder = {
+        date: new Date().toLocaleString('id-ID'),
+        type: "WITHDRAW",
+        ticker: method,
+        qty: 1,
+        total: amount,
+        pnl: null,
+        status: "SUCCESS"
+    };
+
+    const updatedHistory = [withdrawOrder, ...tradeHistory].slice(0, 50);
+
+    try {
+        await update(userRef, {
+            balance: newBalance,
+            history: updatedHistory
+        });
+        alert(`Berhasil! Rp ${amount.toLocaleString()} sedang dikirim ke ${method} (${account})`);
+        navigate('portfolio');
+    } catch (err) {
+        alert("Gagal melakukan penarikan: " + err.message);
+    }
+};
+
+// Update tampilan saldo di halaman withdraw saat navigasi
+const originalNavigate = window.navigate;
+window.navigate = (id) => {
+    originalNavigate(id);
+    if(id === 'withdraw') {
+        document.getElementById('withdraw-available').innerText = fmt(balance);
+        lucide.createIcons(); // Re-render icons for mobile
+    }
+};
+
+       // Pembaruan UI Utama (Bagian Atas)
+window.updateUI = () => {
+    document.getElementById('top-balance').innerText = fmt(balance);
+    document.getElementById('port-cash').innerText = fmt(balance);
+    if (!auth.currentUser) return;
+
+    // 1. Deklarasikan dan Hitung Market Value
+    let marketValue = 0;
+    if (portfolio && currentMarket) {
+        Object.keys(portfolio).forEach(ticker => {
+            if (currentMarket[ticker]) {
+                marketValue += portfolio[ticker].qty * currentMarket[ticker].price;
+            }
+        });
+    }
+
+    // 2. Hitung Equity (Saldo Tunai + Nilai Saham)
+    const equity = balance + marketValue;
+
+    // 3. LOGIKA MARGIN CALL (Gunakan variabel yang sudah dihitung di atas)
+    // Jika Equity nol atau minus, dan user masih punya saham (portfolio tidak kosong)
+    if (equity <= 0 && portfolio && Object.keys(portfolio).length > 0) {
+        triggerMarginCall();
+    }
+
+    // 4. Update Tampilan UI
+    document.getElementById('top-balance').innerText = fmt(balance);
+    
+    // Update halaman portfolio jika sedang dibuka
+    if (!document.getElementById('page-portfolio').classList.contains('hidden')) {
+        renderPortfolio();
+    }
+    
+    let totalMarketValue = 0;
+    let totalInvestment = 0;
+
+    for (let t in portfolio) {
+        if(currentMarket[t]) {
+            const currentPrice = currentMarket[t].price;
+            totalMarketValue += (portfolio[t].qty * currentPrice);
+            totalInvestment += (portfolio[t].qty * portfolio[t].avg);
+        }
+    }
+
+    
+
+    const totalPnL = totalMarketValue - totalInvestment;
+    const pnlPercentage = totalInvestment > 0 ? (totalPnL / totalInvestment * 100).toFixed(2) : 0;
+    
+    // Update Ringkasan Atas
+    document.getElementById('port-value').innerText = fmt(totalMarketValue);
+    const pnlSummaryElement = document.getElementById('port-pnl-summary');
+    
+    pnlSummaryElement.innerText = `${totalPnL >= 0 ? '+' : ''}${fmt(totalPnL)} (${pnlPercentage}%)`;
+    pnlSummaryElement.className = `text-2xl font-bold font-mono ${totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`;
+
+    // Update Baris Tabel Portfolio secara Real-time tanpa me-render ulang seluruh tabel
+    updateLivePortfolioRows();
+};
+
+async function triggerMarginCall() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const userRef = ref(db, `users/${user.uid}`);
+    
+    // Likuidasi paksa: Hapus semua saham dan nolkan saldo
+    await update(userRef, {
+        balance: 0,
+        portfolio: null,
+        history: [{
+            date: new Date().toLocaleString('id-ID'),
+            type: "MARGIN CALL",
+            ticker: "LIQUIDATED",
+            qty: 0,
+            total: 0,
+            pnl: -1, // Indikator kerugian total
+            status: "CLOSED"
+        }, ...tradeHistory].slice(0, 50)
+    });
+
+    alert("🚨 MARGIN CALL! Akun Anda telah dilikuidasi otomatis karena total kekayaan (Equity) mencapai Rp 0.");
+    window.location.reload(); 
+}
+
+    window.renderPortfolio = () => {
+    const cashEl = document.getElementById('port-cash');
+    const valueEl = document.getElementById('port-value');
+    
+    let marketValue = 0;
+    // ... (logika perhitungan marketValue Anda yang sudah ada)
+
+    // LOGIKA PENGECILAN FONT OTOMATIS
+    const adjustFontSize = (amount) => {
+        if (amount >= 1000000000000) { // 1 Triliun ke atas
+            return "text-xl md:text-2xl"; // Sangat Kecil
+        } else if (amount >= 100000000000) { // 100 Miliar - 1 Triliun
+            return "text-2xl md:text-3xl"; // Mengecil
+        } else {
+            return "text-2xl md:text-3xl"; // Ukuran Standar
+        }
+    };
+
+    // Update Cash Display
+    cashEl.innerText = fmt(balance);
+    cashEl.className = `font-bold font-mono text-white tracking-tighter ${adjustFontSize(balance)}`;
+
+    // Update Market Value Display
+    valueEl.innerText = fmt(marketValue);
+    valueEl.className = `font-bold font-mono text-white tracking-tighter ${adjustFontSize(marketValue)}`;
+    const body = document.getElementById('portfolio-body');
+    body.innerHTML = '';
+    
+    if (Object.keys(portfolio).length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-gray-500 uppercase text-xs font-bold tracking-widest">Tidak ada aset di portfolio</td></tr>';
+        return;
+    }
+
+    for (let t in portfolio) {
+        const stock = portfolio[t];
+        body.innerHTML += `
+            <tr id="port-row-${t}" class="border-b border-gray-900 transition-colors">
+                <td class="p-5">
+                    <div class="font-bold">${t}</div>
+                    <div class="text-[10px] text-gray-500">${stock.qty / 100} LOT</div>
+                </td>
+                <td class="p-5 font-mono text-gray-400 text-sm">${fmt(stock.avg)}</td>
+                <td class="p-5 font-mono text-sm cell-last-price">---</td>
+                <td class="p-5 font-mono font-bold cell-pnl">---</td>
+                <td class="p-5 text-right">
+                    <button onclick="quickTrade('${t}')" class="text-xs bg-white text-black px-3 py-1 rounded font-bold hover:bg-blue-500 hover:text-white transition">TRADE</button>
+                </td>
+            </tr>`;
+    }
+    // Segera isi data setelah render
+    updateLivePortfolioRows();
+};
+
+function updateLivePortfolioRows() {
+    for (let t in portfolio) {
+        const row = document.getElementById(`port-row-${t}`);
+        if (row && currentMarket[t]) {
+            const stock = portfolio[t];
+            const marketPrice = currentMarket[t].price;
+            const pnl = (marketPrice - stock.avg) * stock.qty;
+            const pnlPct = ((marketPrice - stock.avg) / stock.avg * 100).toFixed(2);
+            const pnlColor = pnl >= 0 ? 'text-green-500' : 'text-red-500';
+
+            // Update Kolom Last Price
+            row.querySelector('.cell-last-price').innerText = fmt(marketPrice);
+            
+            // Update Kolom P&L
+            const pnlCell = row.querySelector('.cell-pnl');
+            pnlCell.innerHTML = `${fmt(pnl)}<br><span class="text-xs">${pnlPct}%</span>`;
+            pnlCell.className = `p-5 font-mono font-bold ${pnlColor} cell-pnl`;
+        }
+    }
+}
+
+       window.renderHistory = () => {
+    let winCount = 0;
+    let lossCount = 0;
+    
+    const bodyHTML = tradeHistory.map(h => {
+        let pnlDisplay = "---";
+        if (h.type === 'SELL' && h.pnl !== undefined) {
+            const isWin = h.pnl >= 0;
+            if(isWin) winCount++; else lossCount++;
+            
+            pnlDisplay = `<span class="${isWin ? 'text-green-500' : 'text-red-500'} font-bold">
+                ${isWin ? '+' : ''}${fmt(h.pnl)}
+            </span>`;
+        }
+
+        return `
+            <tr class="border-b border-gray-900 text-sm">
+                <td class="p-5 text-gray-500 text-xs">${h.date}</td>
+                <td class="p-5 font-bold ${h.type === 'BUY' ? 'text-blue-500' : 'text-red-500'}">${h.type}</td>
+                <td class="p-5 font-bold">${h.ticker}</td>
+                <td class="p-5 font-mono">${pnlDisplay}</td>
+                <td class="p-5 font-mono text-right text-gray-400">${fmt(h.total)}</td>
+            </tr>`;
+    }).join('');
+
+    document.getElementById('history-body').innerHTML = bodyHTML;
+
+    // UPDATE DIAGRAM WIN RATE
+    const totalTrades = winCount + lossCount;
+    const winRate = totalTrades > 0 ? Math.round((winCount / totalTrades) * 100) : 0;
+    
+    document.getElementById('win-rate-pct').innerText = winRate + "%";
+    document.getElementById('count-win').innerText = winCount + " Wins";
+    document.getElementById('count-loss').innerText = lossCount + " Losses";
+    
+    // Update Progress Bar
+    const winPct = totalTrades > 0 ? (winCount / totalTrades * 100) : 50;
+    const lossPct = totalTrades > 0 ? (lossCount / totalTrades * 100) : 50;
+    document.getElementById('bar-win').style.width = winPct + "%";
+    document.getElementById('bar-loss').style.width = lossPct + "%";
+};
+
+        // UI HELPERS
+        window.quickTrade = (t) => { document.getElementById('trade-symbol').value = t; navigate('trade'); updateTradePriceDisplay(); };
+     window.updateTradePriceDisplay = () => {
+        const t = document.getElementById('trade-symbol').value;
+        const q = document.getElementById('trade-qty').value;
+        if(!currentMarket[t]) return;
+
+        // Reset history jika ganti saham
+        if (t !== lastSelectedSymbol) {
+            priceHistory = [];
+            lastSelectedSymbol = t;
+        }
+
+        const price = currentMarket[t].price;
+        document.getElementById('trade-price').value = fmt(price);
+        document.getElementById('trade-total').innerText = fmt(price * q * 100);
+        
+        document.getElementById('chart-symbol').innerText = t;
+        document.getElementById('chart-price').innerText = fmt(price);
+
+        // Update Data History (Limit 20 titik)
+        if (priceHistory.length >= 20) priceHistory.shift();
+        priceHistory.push(price);
+
+        // Di dalam fungsi updateChart Anda
+        if (stockChartInstance) {
+            stockChartInstance.data.datasets[0].data = priceHistory;
+            
+            // Gunakan durasi 0 agar pergerakan terlihat instan dan tidak membebani CPU
+            stockChartInstance.update('none'); 
+        }
+
+        if (!stockChartInstance) {
+            window.initChart();
+        } else {
+            stockChartInstance.data.datasets[0].data = priceHistory;
+            stockChartInstance.update();
+        }
+    };
+
+    // Panggil updateTradePriceDisplay di dalam onValue market agar chart bergerak real-time
+    onValue(ref(db, 'market'), (snap) => {
+        currentMarket = snap.val();
+        renderMarket();
+        if (document.getElementById('page-trade').classList.contains('hidden') === false) {
+            updateTradePriceDisplay();
+        }
+        updateUI();
+    });
+        window.setTradeMode = (m) => {
+            currentMode = m;
+            document.getElementById('btn-mode-buy').className = m === 'buy' ? "flex-1 py-3 rounded-xl font-bold bg-blue-600 text-white" : "flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400";
+            document.getElementById('btn-mode-sell').className = m === 'sell' ? "flex-1 py-3 rounded-xl font-bold bg-red-600 text-white" : "flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400";
+            const ex = document.getElementById('btn-execute');
+            ex.innerText = m === 'buy' ? "KONFIRMASI BELI" : "KONFIRMASI JUAL";
+            ex.className = m === 'buy' ? "w-full bg-white text-black font-black py-5 rounded-2xl shadow-lg" : "w-full bg-red-600 text-white font-black py-5 rounded-2xl shadow-lg";
+        };
+
+        // INIT
+        window.onload = async () => {
+            lucide.createIcons();
+            await initDB();
+            onValue(ref(db, 'market'), (snap) => {
+                currentMarket = snap.val();
+                renderMarket();
+                updateTradePriceDisplay();
+                updateUI();
+            });
+            startMarketSimulation();
+            document.getElementById('trade-qty').addEventListener('input', updateTradePriceDisplay);
+        };
+    </script>
+</body>
+</html>
